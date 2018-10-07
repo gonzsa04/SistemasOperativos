@@ -77,7 +77,7 @@ stHeaderEntry* readHeader(FILE * tarFile, int *nFiles)
 	int tam = 0;
     stHeaderEntry *header=NULL; 
 
-    header=malloc(sizeof(stHeaderEntry)*nFiles); //reservamos memoria para header
+    header=malloc(sizeof(stHeaderEntry)*(*nFiles)); //reservamos memoria para header
    
     for (int i = 0; i < nFiles; i++) {
         fread(&tam, sizeof(int), 1, tarFile); 
