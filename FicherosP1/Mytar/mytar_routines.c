@@ -45,13 +45,22 @@ int copynFile(FILE * origin, FILE * destination, int nBytes)
  */
 char* loadstr(FILE * file)
 {
-	char * buffer = 0;
-	long length;
-	fseek (file, 0, SEEK_END);
-  	length = ftell (file);
-  	fseek (file, 0, SEEK_SET);
-  	buffer = malloc (length);
-	return buffer;
+	int longitudNombre = 0;
+    char *nombre;
+    char c;
+
+    while((c = getc(file) != '\0')) { //hasta que llegue al final del nombre
+        longitudNombre++; //aumentamos la longitud
+    }
+
+    nombre =  malloc(sizeof(char) * (longitudNombre + 1)); //reserva espacio en memoria para el nombre
+    fseek(file, -(longitudNombre + 1), SEEK_CUR); //apunta al principio del nombre
+
+    for (int i = 0; i < longitudNombre+1; i++) {
+        nombre[i] = getc(file); //guardamos el nombre del archivo en nombre
+    }    
+
+	return nombre;
 }
 
 /** Read tarball header and store it in memory.
@@ -65,8 +74,18 @@ char* loadstr(FILE * file)
  */
 stHeaderEntry* readHeader(FILE * tarFile, int *nFiles)
 {
-	// Complete the function
-	return NULL;
+	int tam = 0;
+    stHeaderEntry *header=NULL; 
+
+    header=malloc(sizeof(stHeaderEntry)*nFiles); //reservamos memoria para header
+   
+    for (int i = 0; i < nFiles; i++) {
+        fread(&tam, sizeof(int), 1, tarFile); 
+        header[i].size = tam;
+		header[i].name = loadstr(tarFile);
+    }
+
+	return header;
 }
 
 /** Creates a tarball archive 
@@ -92,8 +111,49 @@ stHeaderEntry* readHeader(FILE * tarFile, int *nFiles)
  */
 int createTar(int nFiles, char *fileNames[], char tarName[])
 {
-	// Complete the function
-	return EXIT_FAILURE;
+	FILE * entrada; //Creacion de variables
+    FILE * salida;
+
+    int bytes = 0, headerBytes = 0;
+    stHeaderEntry *header; 
+
+    header = malloc(sizeof(stHeaderEntry) * nFiles); // reserva memoria para el header
+    headerBytes += sizeof(int); 
+    headerBytes += nFiles*sizeof(unsigned int); 
+
+    for (int i=0; i < nFiles; i++) {
+        headerBytes+=strlen(fileNames[i])+1; 
+    }
+
+    salida =  fopen(tarName, "w"); // Abrimos el archivo
+    fseek(salida, headerBytes, SEEK_SET); //hacemos que el puntero apunte al principio del archivo
+
+    for (int i=0; i < nFiles; i++) {
+        bytes = copynFile(entrada, salida, INT_MAX);
+        header[i].size = bytes; 
+        header[i].name = malloc(sizeof(fileNames[i]) + 1); 
+        strcpy(header[i].name, fileNames[i]);  
+    
+    if (fclose(entrada) == EOF) return EXIT_FAILURE; // si no es posible cerrar el archivo devolvemos error
+    }
+	
+    fwrite(&nFiles, sizeof(int), 1, salida); 
+    
+
+    for (int i = 0; i < nFiles; i++) {
+        fwrite(header[i].name, strlen(header[i].name)+1, 1, salida);
+        fwrite(&header[i].size, sizeof(unsigned int), 1, salida); 
+    }
+    
+    for (int i=0; i < nFiles; i++) {
+        free(header[i].name); 
+    }
+
+    free(header);
+
+    if (fclose(salida) == EOF) { return (EXIT_FAILURE); } //intentamos cerrar elarchivo, si falla devolvemos error
+
+    return EXIT_SUCCESS;
 }
 
 /** Extract files stored in a tarball archive
@@ -112,6 +172,27 @@ int createTar(int nFiles, char *fileNames[], char tarName[])
  */
 int extractTar(char tarName[])
 {
-	// Complete the function
-	return EXIT_FAILURE;
+	FILE *tarFile = NULL; 
+    FILE *final = NULL;
+    stHeaderEntry *header;
+    int nFiles = 0, bytes = 0;
+
+    for (int i = 0; i < nFiles; i++) {
+
+        if ((final = fopen(header[i].name, "w")) == NULL) { return EXIT_FAILURE; } // si no podemos crear el archivo devolvemos error
+        else {
+            bytes = copynFile(tarFile, final, header[i].size);     
+    }  
+        
+        if(fclose(final) != 0) { return EXIT_FAILURE; } // si no podemos cerrar el archivo, devolvemos error
+    }
+
+    for (int i = 0; i <nFiles; i++) {
+        free(header[i].name);
+    }
+
+    free(header);
+    if (fclose(tarFile) == EOF) { return (EXIT_FAILURE); }
+
+    return (EXIT_SUCCESS);
 }
