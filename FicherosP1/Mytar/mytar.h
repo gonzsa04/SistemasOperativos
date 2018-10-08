@@ -18,3 +18,5 @@ typedef struct {
 int createTar(int nFiles, char *fileNames[], char tarName[]);
 
 int extractTar(char tarName[]);
+
+#endif

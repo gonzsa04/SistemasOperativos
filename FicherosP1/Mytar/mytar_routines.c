@@ -134,7 +134,7 @@ int createTar(int nFiles, char *fileNames[], char tarName[])
 	                                                 // de datos, avanzando desde el principio lo que vaya a ocupar el cabecero
 
     for (int i = 0; i < nFiles; i++) {               // para cada archivo copiamos en bytes el maximo que podamos
-		entrada = fopen(fileNames[i], "r"))
+		entrada = fopen(fileNames[i], "r");
         bytes = copynFile(entrada, salida, INT_MAX); // asi nos aseguramos de haber escrito todo el contenido en salida
         header[i].size = bytes;                      // ademas nos devuelve su tamaño
         header[i].name = malloc(sizeof(fileNames[i]) + 1); // hacemos hueco para el nombre con lo que ocupe + '\0'
@@ -187,7 +187,7 @@ int extractTar(char tarName[])
     stHeaderEntry *header;
     int nFiles = 0, bytes = 0;                      // numero de archivos y tamaño que ocupara cada uno
 
-	tarFile = fopen(tarName, "r"));
+	tarFile = fopen(tarName, "r");
 	header = readHeader(tarFile, &nFiles);          // obtenemos header y nFiles
 
     for (int i = 0; i < nFiles; i++) {
