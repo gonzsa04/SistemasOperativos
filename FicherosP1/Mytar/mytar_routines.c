@@ -16,19 +16,19 @@ extern char *use;
  */
 int copynFile(FILE * origin, FILE * destination, int nBytes)
 {
-	if (origin == NULL) return -1;
+	if (origin == NULL) return -1;     // si el origen no existe damos error
 
-	int c = fgetc(origin);
+	int c = getc(origin);             // c guarda el primer dato del origen
 	int i = 0;
 
-	while (i < nBytes && c != EOF) 
+	while (i < nBytes && c != EOF)     // mientras no hayamos copiado los nBytes y c no haya llegado al final
     { 
-        fputc(c, destination); 
-        c = fgetc(origin); 
+        putc(c, destination);         // depositamos el contenido de c en el destino
+        c = getc(origin);             // c guarda el siguiente dato del origen
         i++;
     }
 
-    if(i < nBytes)return -1;
+    if(i < nBytes)return -1;           // si no se han llegado a copiar todos los bytes error
     return i;
 }
 
@@ -46,18 +46,17 @@ int copynFile(FILE * origin, FILE * destination, int nBytes)
 char* loadstr(FILE * file)
 {
 	int longitudNombre = 0;
-    char *nombre;
+    char *nombre;                                          // cadena de char que representa el nombre del archivo
     char c;
+	                                                       
+    while((c = getc(file) != '\0')) longitudNombre++;      // calculamos la longitud del nombre
 
-    while((c = getc(file) != '\0')) { //hasta que llegue al final del nombre
-        longitudNombre++; //aumentamos la longitud
-    }
+    nombre =  malloc(sizeof(char) * (longitudNombre + 1)); // reservamos espacio en memoria para el nombre
+    fseek(file, -longitudNombre - 1, SEEK_CUR);            // movemos el puntero desde el actual devuelto por malloc
+	                                                       // hasta el principio del archivo (- su longitud - 1)
 
-    nombre =  malloc(sizeof(char) * (longitudNombre + 1)); //reserva espacio en memoria para el nombre
-    fseek(file, -(longitudNombre + 1), SEEK_CUR); //apunta al principio del nombre
-
-    for (int i = 0; i < longitudNombre+1; i++) {
-        nombre[i] = getc(file); //guardamos el nombre del archivo en nombre
+    for (int i = 0; i < longitudNombre + 1; i++) {         // guardamos el nombre del archivo en nombre,
+        nombre[i] = getc(file);                            // que ya tiene memoria reservada por malloc
     }    
 
 	return nombre;
@@ -75,12 +74,14 @@ char* loadstr(FILE * file)
 stHeaderEntry* readHeader(FILE * tarFile, int *nFiles)
 {
 	int tam = 0;
-    stHeaderEntry *header=NULL; 
+    stHeaderEntry *header = NULL;                       // array que contendra tamaño y nombre de cada archivo
 
-    header=malloc(sizeof(stHeaderEntry)*(*nFiles)); //reservamos memoria para header
-   
-    for (int i = 0; i < nFiles; i++) {
-        fread(&tam, sizeof(int), 1, tarFile); 
+	fread(nFiles, sizeof(int), 1, tarFile);             // leemos el numero de archivos de tarFile
+
+    header = malloc(sizeof(stHeaderEntry)*(*nFiles));   // reservamos memoria para header (lo que ocupe el struct
+                                                        // x todos los archivos que haya)
+    for (int i = 0; i < nFiles; i++) {                  // para cada archivo guardamos en su struct correspondiente
+        fread(&tam, sizeof(int), 1, tarFile);           // su tamaño y nombre
         header[i].size = tam;
 		header[i].name = loadstr(tarFile);
     }
@@ -111,47 +112,56 @@ stHeaderEntry* readHeader(FILE * tarFile, int *nFiles)
  */
 int createTar(int nFiles, char *fileNames[], char tarName[])
 {
-	FILE * entrada; //Creacion de variables
-    FILE * salida;
+	FILE * entrada;                                  // leemos
+    FILE * salida;                                   // escribimos
 
-    int bytes = 0, headerBytes = 0;
+    int bytes = 0, headerBytes = 0;                  // tamaño que ocupara cada archivo y y el cabecero del principio
     stHeaderEntry *header; 
 
-    header = malloc(sizeof(stHeaderEntry) * nFiles); // reserva memoria para el header
-    headerBytes += sizeof(int); 
-    headerBytes += nFiles*sizeof(unsigned int); 
+    header = malloc(sizeof(stHeaderEntry) * nFiles); // reservamos memoria para el header
 
-    for (int i=0; i < nFiles; i++) {
-        headerBytes+=strlen(fileNames[i])+1; 
+	// DETERMINAMOS CUANTO OCUPARA LA CABECERA
+    headerBytes += sizeof(int);                      // lo que ocupa nFiles (size de un int)
+    headerBytes += nFiles*sizeof(int);               // mas el tamaño de cada archivo (size de un int)
+
+    for (int i=0; i < nFiles; i++) {                 // mas el nombre de cada archivo:
+        headerBytes+=strlen(fileNames[i])+1;         // size del nombre de cada archivo + '\0'
     }
 
-    salida =  fopen(tarName, "w"); // Abrimos el archivo
-    fseek(salida, headerBytes, SEEK_SET); //hacemos que el puntero apunte al principio del archivo
+	// RELLENAMOS HEADER CON NOMBRES Y TAMAÑOS Y ESCRIBIMOS LOS DATOS DE LOS ARCHIVOS EN LA SECCION DATA
+    salida =  fopen(tarName, "w");                   // creamos un archivo vacio (w->writing) con el nombre deseado
+    fseek(salida, headerBytes, SEEK_SET);            // hacemos que el puntero de salida apunte a la seccion
+	                                                 // de datos, avanzando desde el principio lo que vaya a ocupar el cabecero
 
-    for (int i=0; i < nFiles; i++) {
-        bytes = copynFile(entrada, salida, INT_MAX);
-        header[i].size = bytes; 
-        header[i].name = malloc(sizeof(fileNames[i]) + 1); 
-        strcpy(header[i].name, fileNames[i]);  
+    for (int i = 0; i < nFiles; i++) {               // para cada archivo copiamos en bytes el maximo que podamos
+		entrada = fopen(fileNames[i], "r"))
+        bytes = copynFile(entrada, salida, INT_MAX); // asi nos aseguramos de haber escrito todo el contenido en salida
+        header[i].size = bytes;                      // ademas nos devuelve su tamaño
+        header[i].name = malloc(sizeof(fileNames[i]) + 1); // hacemos hueco para el nombre con lo que ocupe + '\0'
+        strcpy(header[i].name, fileNames[i]);        // copiamos el nombre del archivo
     
     if (fclose(entrada) == EOF) return EXIT_FAILURE; // si no es posible cerrar el archivo devolvemos error
     }
 	
-    fwrite(&nFiles, sizeof(int), 1, salida); 
+	// ESCRIBIMOS LA CABECERA
+	fseek(salida, 0, SEEK_SET);                      // movemos el puntero de salida al principio otra vez
+    fwrite(&nFiles, sizeof(int), 1, salida);         // escribimos el numero de archivos
     
-
+	// para cada archivo escribimos su nombre y tamaño
     for (int i = 0; i < nFiles; i++) {
         fwrite(header[i].name, strlen(header[i].name)+1, 1, salida);
         fwrite(&header[i].size, sizeof(unsigned int), 1, salida); 
     }
     
-    for (int i=0; i < nFiles; i++) {
+	// LIBERAMOS Y CERRAMOS	
+	// liberamos los nombres de los archivos de header
+    for (int i = 0; i < nFiles; i++) {
         free(header[i].name); 
     }
 
-    free(header);
+    free(header);          // liberamos header
 
-    if (fclose(salida) == EOF) { return (EXIT_FAILURE); } //intentamos cerrar elarchivo, si falla devolvemos error
+    if (fclose(salida) == EOF) return (EXIT_FAILURE); // si no podemos cerrar el archivo devolvemos error
 
     return EXIT_SUCCESS;
 }
@@ -175,24 +185,26 @@ int extractTar(char tarName[])
 	FILE *tarFile = NULL; 
     FILE *final = NULL;
     stHeaderEntry *header;
-    int nFiles = 0, bytes = 0;
+    int nFiles = 0, bytes = 0;                      // numero de archivos y tamaño que ocupara cada uno
+
+	tarFile = fopen(tarName, "r"));
+	header = readHeader(tarFile, &nFiles);          // obtenemos header y nFiles
 
     for (int i = 0; i < nFiles; i++) {
-
-        if ((final = fopen(header[i].name, "w")) == NULL) { return EXIT_FAILURE; } // si no podemos crear el archivo devolvemos error
-        else {
-            bytes = copynFile(tarFile, final, header[i].size);     
-    }  
-        
-        if(fclose(final) != 0) { return EXIT_FAILURE; } // si no podemos cerrar el archivo, devolvemos error
+        if ((final = fopen(header[i].name, "w")) == NULL) return EXIT_FAILURE; // si no podemos crear el archivo devolvemos error
+        else bytes = copynFile(tarFile, final, header[i].size);    // copiamos todo el contenido de cada header en final
+		if (bytes == -1) return EXIT_FAILURE;                      // si bytes es -1 significaba error
+        if(fclose(final) != 0) return EXIT_FAILURE;                // si no podemos cerrar el archivo, devolvemos error
     }
 
+	// liberamos los nombres de los archivos de header
     for (int i = 0; i <nFiles; i++) {
         free(header[i].name);
     }
 
-    free(header);
-    if (fclose(tarFile) == EOF) { return (EXIT_FAILURE); }
+    free(header);     // liberamos header
+
+    if (fclose(tarFile) == EOF) return (EXIT_FAILURE); // si no podemos cerrar el archivo devolvemos error
 
     return (EXIT_SUCCESS);
 }
