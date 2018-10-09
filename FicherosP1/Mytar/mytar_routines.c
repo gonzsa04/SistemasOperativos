@@ -16,20 +16,16 @@ extern char *use;
  */
 int copynFile(FILE * origin, FILE * destination, int nBytes)
 {
-	if (origin == NULL) return -1;     // si el origen no existe damos error
+	int i = 0, c = 0;  
 
-	int c = getc(origin);             // c guarda el primer dato del origen
-	int i = 0;
-
-	while (i < nBytes && c != EOF)     // mientras no hayamos copiado los nBytes y c no haya llegado al final
-    { 
-        putc(c, destination);         // depositamos el contenido de c en el destino
-        c = getc(origin);             // c guarda el siguiente dato del origen
+    if (origin == NULL) return -1; 
+    
+    while(i < nBytes && (c = getc(origin)) != EOF) { 
+        putc(c, destination);
         i++;
     }
 
-    if(i < nBytes)return -1;           // si no se han llegado a copiar todos los bytes error
-    return i;
+return i;
 }
 
 /** Loads a string from a file.
@@ -80,10 +76,10 @@ stHeaderEntry* readHeader(FILE * tarFile, int *nFiles)
 
     header = malloc(sizeof(stHeaderEntry)*(*nFiles));   // reservamos memoria para header (lo que ocupe el struct
                                                         // x todos los archivos que haya)
-    for (int i = 0; i < nFiles; i++) {                  // para cada archivo guardamos en su struct correspondiente
+    for (int i = 0; i < *nFiles; i++) {                 // para cada archivo guardamos en su struct correspondiente
+        header[i].name = loadstr(tarFile);
         fread(&tam, sizeof(int), 1, tarFile);           // su tamaño y nombre
         header[i].size = tam;
-		header[i].name = loadstr(tarFile);
     }
 
 	return header;
