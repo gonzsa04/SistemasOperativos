@@ -477,18 +477,18 @@ static int my_truncate(const char *path, off_t size)
 int my_unlink(const char *filename) {
 	char* fname=(char*)(filename+1); // hacemos que el nombre del fichero pueda ser aceptado por findFileByName
 	
-	int nodeIndexDir = findFileByName(&myFileSystem, fname); // findFileByName devolvera la direccion de ese fichero en nuestro sistema (- 1 si no esta)
+	int nodeDir = findFileByName(&myFileSystem, fname); // findFileByName devolvera la direccion de ese fichero en nuestro sistema (- 1 si no esta)
 	 
 	// si el archivo esta en el sistema de ficheros
-	if (nodeIndexDir != -1) {
-		myFileSystem.directory.files[nodeIndexDir].freeFile = true;         // lo liberamos
+	if (nodeDir != -1) {
+		myFileSystem.directory.files[nodeDir].freeFile = true;         // lo liberamos
 		myFileSystem.directory.numFiles -= 1;
 		updateDirectory(&myFileSystem);
 	
-		int direccion = myFileSystem.directory.files[nodeIndexDir].nodeIdx; // nos guardamos la direccion del fichero para que sea mas comodo referirse a ella
+		int direccion = myFileSystem.directory.files[nodeDir].nodeIdx;     // nos guardamos la direccion del fichero para que sea mas comodo referirse a ella
 		NodeStruct* nodo=myFileSystem.nodes[direccion];                    // puntero al nodo del fichero
 
-		myFileSystem.numFreeNodes += 1;                                     // + un nodo libre
+		myFileSystem.numFreeNodes += 1;                                    // + un nodo libre
 	
 		for (int i=0;i<nodo->numBlocks;i++)
 			myFileSystem.bitMap[nodo->blocks[i]] = 0;                      // liberamos todos los bloques del nodo del fichero
