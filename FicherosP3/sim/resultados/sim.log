@@ -1,0 +1,15 @@
+======================================
+c2	0	1	ready
+c2	1	4	WE
+c1	0	2	ready
+c1	2	5	WE
+c0	0	0	ready
+c0	0	3	WE
+c6	2	4	ready
+c6	4	7	WE
+m5	2	3	ready
+m5	3	6	WE
+v4	2	7	ready
+v4	7	10	EW
+c3	1	8	ready
+c3	8	11	EW

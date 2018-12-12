@@ -29,6 +29,13 @@ int sys_barrier_init(sys_barrier_t *barrier, unsigned int nr_threads)
 	/* Initialize fields in sys_barrier_t
 	     ... To be completed ....
 	*/
+	pthread_mutex_init(&(barrier->mutex), NULL); 
+  	pthread_cond_init(&(barrier->cond), NULL);
+
+    barrier->nr_threads_arrived = 0; //inicializamos el numero de hilos que han llegado a 0
+
+    barrier->max_threads = nr_threads; //inicializamos el numero maximo de hilos que puede haber
+  
 	return 0;
 }
 
@@ -38,6 +45,8 @@ int sys_barrier_destroy(sys_barrier_t *barrier)
 	/* Destroy synchronization resources associated with the barrier
 	      ... To be completed ....
 	*/
+	pthread_mutex_destroy(&(barrier->mutex));
+	pthread_cond_destroy(&(barrier->cond));
 	return 0;
 }
 
@@ -56,7 +65,20 @@ int sys_barrier_wait(sys_barrier_t *barrier)
 
 	    ... To be completed ....
 	*/
-	return 0;
+  pthread_mutex_lock(&(barrier->mutex));
+  barrier->nr_threads_arrived++; //ha llegado un hilo mas
+
+  if(barrier->nr_threads_arrived < barrier->max_threads){ // si no supera el maximo
+    pthread_cond_wait(&(barrier->cond), &(barrier->mutex)); // esperamos
+  }
+  else{
+    barrier->nr_threads_arrived = 0;  //si ha llegado al maximo, reseteamos el numero de hilos que han llegado
+    pthread_cond_broadcast(&(barrier->cond)); //despertamos a todas las varialbles condicionales
+  }
+
+  pthread_mutex_unlock(&(barrier->mutex));
+    
+    return 0;
 }
 
 #endif /* POSIX_BARRIER */
